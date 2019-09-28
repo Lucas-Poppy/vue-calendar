@@ -1,5 +1,17 @@
 <template>
   <div class="container">
+    <div class="modal-wrap">
+      <div class="content-wrap">
+        <span class="day">{{modalDay.day}}</span>
+        <span class="plan -long -blue">
+          <span>{{modalDay.title}}</span>
+        </span>
+        <span v-for="plan in modalDay.plans" class="plan -short" :key="plan.index" :class="colorClass(plan.index)">
+          <span class="time">{{plan.start_time}}</span>{{plan.name}}
+        </span>
+        <span class="back-btn"></span>
+      </div>
+    </div>
     <div class="WebCalender">
       <div class="year-month-wrap">
         <ul class="month-btn-list">
@@ -35,16 +47,18 @@
             <span>土</span>
           </div>
         </div>
-
         <div class="days-wrap">
-          <div v-for="day in calendarData" :key="day.index" class="item" :class="{'-weekstart':isWeekStart }">
+          <div v-for="day in calendarData" :key="day.index" class="item">
             <div class="content-wrap">
               <span class="day">{{dayFormat(day)}}</span>
-              <span v-for="plan in longPlans(day)" :key="plan.index" class="plan -long -blue" :class="longPlanStatus(plan)">
-                <span>{{plan.name}}</span>
+              <span v-for="plan in longPlans(day)"
+               :key="plan.index"
+               class="plan -long -blue"
+               :class="longPlanStatus(plan, day)">
+                <span>{{ plan.title }}</span>
               </span>
               <span v-for="plan in dayPlans(day)" :key="plan.index" class="plan -short" :class="colorClass(plan.index)">
-                <span class="time">{{plan['start_time']}}</span>{{plan.name}}
+                <span class="time">{{plan.start_time}}</span>{{plan.name}}
               </span>
             </div>
           </div>
@@ -59,56 +73,6 @@
               <span class="plan -short -yellow"><span class="time">21:00</span>生徒さん親さ...</span>
               <span class="mult-num">3</span>
             </div>
-          </div>
-          <div class="item">
-            <div class="content-wrap">
-              <span class="day">2</span>
-              <span class="plan -long -middle -blue">
-                <span>夏期講習</span>
-              </span>
-            </div>
-          </div>
-          <div class="item">
-            <div class="content-wrap">
-              <span class="day">3</span>
-              <span class="plan -long -middle -blue">
-                <span>夏期講習</span>
-              </span>
-            </div>
-          </div>
-          <div class="item">
-            <div class="content-wrap">
-              <span class="day">4</span>
-              <span class="plan -long -middle -blue">
-                <span>夏期講習</span>
-              </span>
-            </div>
-          </div>
-          <div class="item">
-            <div class="content-wrap">
-              <span class="day">5</span>
-              <span class="plan -long -middle -blue">
-                <span>夏期講習</span>
-              </span>
-            </div>
-          </div>
-          <div class="item">
-            <div class="content-wrap">
-              <span class="day">6</span>
-              <span class="plan -long -middle -blue">
-                <span>夏期講習</span>
-              </span>
-              <span class="plan -short -red">新規ユーザー訪問</span>
-              <span class="plan -short -purple">小林ゼミナール...</span>
-            </div>
-          </div>
-          <div class="item">
-            <div class="content-wrap">
-              <span class="day">7</span>
-              <span class="plan -long -end -blue">
-                <span>夏期講習</span>
-              </span>
-            </div>
           </div> -->
         </div>
       </div>
@@ -118,6 +82,7 @@
 
 <script>
 import moment from 'moment'
+import _ from 'lodash'
 export default {
   data () {
     return {
@@ -125,47 +90,108 @@ export default {
       current: 1,
       long_plans: [],
       day_plans: [],
-      color: ['-red', '-orange', '-yellow', '-light-green', '-green', '-sky-blue', '-blue', '-purple']
+      color: ['-red', '-orange', '-yellow', '-light-green', '-green', '-sky-blue', '-blue', '-purple'],
+      modalDay: {
+        day: '',
+        title: '',
+        plans: []
+      }
     }
   },
   methods: {
+    /**
+     * 来月のカレンダーを表示する
+     */
     goNextMonth () {
       this.current++
     },
+    /**
+     * 先月のカレンダーを表示する
+     */
     goPrevMonth () {
       this.current--
     },
-    dayPlans (day) {
-      return this.day_plans.filter(x => x.day === day)
+    /**
+     * 指定された日のプランのみを返す
+     */
+    dayPlans (date) {
+      return this.day_plans.filter(x => x.day === date)
     },
+    /**
+     * カラー用のクラスを返す
+     */
     colorClass (number) {
       return this.color[number % 8]
     },
+    /**
+     * YYYYMMDD形式の日付を受け取って日付のみ返す
+     */
     dayFormat (date) {
       return moment(date, 'YYYYMMDD').format('DD')
     },
-    longPlans (day) {
-      return this.long_plans.filter(x => (x.start_date <= day && x.end_date >= day))
+    /**
+     * 指定された日に存在する長期予定を返す
+     */
+    longPlans (date) {
+      const todayPlans = this.long_plans.filter(x => (x.start_date === date))
+      if (!this.isWeekStart(date)) {
+        return todayPlans
+      }
+      const plansInTime = this.long_plans.filter(x => (x.start_date <= date && x.end_date >= date))
+      const result = _.uniqBy([...todayPlans, ...plansInTime], 'id')
+
+      return result
     },
     /**
-     * start || middle || end || alone
+     * その週のどこまで長期講習を表示させるか計算してクラス名を返す
      */
-    longPlanStatus (longPlan) {
-      if (longPlan.start_date === longPlan.end_date) {
-        return '-alone'
+    longPlanStatus (longPlan, date) {
+      // 指定された日付から何日間あるか
+      const dateDiff = this.dateDifference(date, longPlan.end_date) + 1
+      // 来週に跨いでいた場合
+      if (7 - this.weekDay(date) < dateDiff) {
+        return `-l${7 - this.weekDay(date)}`
       }
-      return {status: 'status'}
+      return `-l${dateDiff}`
     },
+    /**
+     * 曜日の番号を返す 日から順に0,1...
+     */
+    weekDay (date) {
+      return moment(date, 'YYYYMMDD').day()
+    },
+    /**
+     * 週の始まりかどうかを返す
+     */
     isWeekStart (date) {
-      return moment(date, 'YYYYMMDD').day() === 0
+      return this.weekDay(date) === 0
+    },
+    dateDifference (date1, date2) {
+      const diffInDays = moment(date1, 'YYYYMMDD').diff(moment(date2, 'YYYYMMDD'), 'days')
+      return Math.abs(diffInDays)
     }
+    // /**
+    //  * その週の開始日を取得する 使うかわからん
+    //  */
+    // weeklyStartDate (date, longPlan) {
+    //   // その週の日曜日と何日差があるか取得
+    //   const diffSunDay = moment(date, 'YYYYMMDD').day()
+    //   // 長期講習の開始日と何日差があるか取得
+    //   const diffInDays = moment(date, 'YYYYMMDD').diff(moment(longPlan.start_date, 'YYYYMMDD'), 'days')
+    //   if (diffSunDay >= diffInDays) {
+    //     return moment(longPlan.start_date, 'YYYYMMDD').format('YYYYMMDD')
+    //   }
+    //   return moment(date, 'YYYYMMDD').add(diffSunDay, 'days').format('YYYYMMDD')
+    // }
+
   },
   created () {
     this.long_plans = [
-      {start_date: '20191012', end_date: '20191024', title: '長期講習1'}
+      {id: 1, start_date: '20191012', end_date: '20191024', title: '長期講習1'},
+      {id: 2, start_date: '20191023', end_date: '20191027', title: 'hogehoge'}
     ]
     this.day_plans = [
-      {day: '20191015', start_time: '19:00', end_time: '21:00', name: '数学'}
+      {id: 1, day: '20191015', start_time: '19:00', end_time: '21:00', name: '数学'}
     ]
   },
   computed: {
@@ -209,91 +235,7 @@ export default {
   }
 }
 </script>
-
 <style scoped>
-html, body, div, span, object, iframe,
-h1, h2, h3, h4, h5, h6, p, blockquote, pre,
-abbr, address, cite, code,
-del, dfn, em, img, ins, kbd, q, samp,
-small, strong, sub, sup, var,
-b, i,
-dl, dt, dd, ol, ul, li,
-fieldset, form, label, legend,
-table, caption, tbody, tfoot, thead, tr, th, td,
-article, aside, canvas, details, figcaption, figure,
-footer, header, hgroup, menu, nav, section, summary,
-time, mark, audio, video {
-  margin: 0;
-  padding: 0;
-  border: 0;
-  outline: 0;
-  font-size: 100%;
-  vertical-align: baseline;
-  background: transparent; }
-
-body {
-  line-height: 1; }
-
-article, aside, details, figcaption, figure,
-footer, header, hgroup, menu, nav, section {
-  display: block; }
-
-nav ul {
-  list-style: none; }
-
-blockquote, q {
-  quotes: none; }
-
-blockquote:before, blockquote:after,
-q:before, q:after {
-  content: '';
-  content: none; }
-
-a {
-  margin: 0;
-  padding: 0;
-  font-size: 100%;
-  vertical-align: baseline;
-  background: transparent; }
-
-/* change colours to suit your needs */
-ins {
-  background-color: #ff9;
-  color: #000;
-  text-decoration: none; }
-
-/* change colours to suit your needs */
-mark {
-  background-color: #ff9;
-  color: #000;
-  font-style: italic;
-  font-weight: bold; }
-
-del {
-  text-decoration: line-through; }
-
-abbr[title], dfn[title] {
-  border-bottom: 1px dotted;
-  cursor: help; }
-
-table {
-  border-collapse: collapse;
-  border-spacing: 0; }
-
-/* change border colour to suit your needs */
-hr {
-  display: block;
-  height: 1px;
-  border: 0;
-  border-top: 1px solid #cccccc;
-  margin: 1em 0;
-  padding: 0; }
-
-input, select {
-  vertical-align: middle; }
-
-li {
-  list-style: none; }
 *,
 *:after,
 *:before {
@@ -304,12 +246,191 @@ li {
 }
 
 .container {
+  position: relative;
   width: 1080px;
   height: 100vh;
   margin: 0 auto;
   border-left: solid 1px #ccc;
   border-right: solid 1px #ccc;
   padding: 64px calc((1080px - 986px) / 2) 0
+}
+
+.modal-wrap {
+  position: absolute;
+  top: 0px;
+  left: 0px
+}
+
+.modal-wrap .content-wrap {
+  background-color: #fff;
+  border-radius: 5px;
+  width: 136px;
+  height: 116px;
+  padding: 6px 2px;
+  -webkit-transition: .3s;
+  transition: .3s;
+  position: absolute;
+  min-width: 245px;
+  height: 300px;
+  -webkit-box-shadow: 0 3px 6px #00000029;
+  box-shadow: 0 3px 6px #00000029;
+  padding: 14px 10px 10px;
+  z-index: 40
+}
+
+.modal-wrap .content-wrap .day {
+  display: block;
+  color: #666;
+  font-size: 12px;
+  font-family: "Roboto Condensed", sans-serif;
+  text-align: center;
+  line-height: 16px;
+  margin: 0 auto 3px;
+  width: 16px;
+  z-index: 10;
+  color: #333;
+  background-color: #fff;
+  font-size: 14px;
+  margin: 10px 0 14px;
+  width: 100%
+}
+
+.modal-wrap .content-wrap .plan {
+  font-size: 14px;
+  margin-bottom: 10px
+}
+
+.modal-wrap .content-wrap .plan.-long {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: calc(1em + 6px)
+}
+
+.modal-wrap .content-wrap .plan.-long span {
+  background-color: #EA7979;
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 5px;
+  position: absolute;
+  left: -2px;
+  width: 100%;
+  z-index: 10
+}
+
+.modal-wrap .content-wrap .plan.-long.-red span {
+  background-color: #EA7979
+}
+
+.modal-wrap .content-wrap .plan.-long.-orange span {
+  background-color: #F8A748
+}
+
+.modal-wrap .content-wrap .plan.-long.-yellow span {
+  background-color: #F2E32D
+}
+
+.modal-wrap .content-wrap .plan.-long.-light-green span {
+  background-color: #88D64E
+}
+
+.modal-wrap .content-wrap .plan.-long.-green span {
+  background-color: #29C48F
+}
+
+.modal-wrap .content-wrap .plan.-long.-sky-blue span {
+  background-color: #6FD2F0
+}
+
+.modal-wrap .content-wrap .plan.-long.-blue span {
+  background-color: #7979FF
+}
+
+.modal-wrap .content-wrap .plan.-long.-purple span {
+  background-color: #BB76E6
+}
+
+.modal-wrap .content-wrap .plan.-short {
+  display: block;
+  height: calc(1em + 6px);
+  padding: 3px 0
+}
+
+.modal-wrap .content-wrap .plan.-short:before {
+  content: '';
+  background-color: #EA7979;
+  border-radius: 4px;
+  padding: 2px 3px;
+  margin-right: 4px;
+  height: 8px;
+  width: 8px
+}
+
+.modal-wrap .content-wrap .plan.-short.-red:before {
+  background-color: #EA7979
+}
+
+.modal-wrap .content-wrap .plan.-short.-orange:before {
+  background-color: #F8A748
+}
+
+.modal-wrap .content-wrap .plan.-short.-yellow:before {
+  background-color: #F2E32D
+}
+
+.modal-wrap .content-wrap .plan.-short.-light-green:before {
+  background-color: #88D64E
+}
+
+.modal-wrap .content-wrap .plan.-short.-green:before {
+  background-color: #29C48F
+}
+
+.modal-wrap .content-wrap .plan.-short.-sky-blue:before {
+  background-color: #6FD2F0
+}
+
+.modal-wrap .content-wrap .plan.-short.-blue:before {
+  background-color: #7979FF
+}
+
+.modal-wrap .content-wrap .plan.-short.-purple:before {
+  background-color: #BB76E6
+}
+
+.modal-wrap .content-wrap .plan.-short .time {
+  font-family: "Roboto Condensed", sans-serif;
+  font-weight: bold;
+  color: #999;
+  margin-right: 6px
+}
+
+.modal-wrap .content-wrap .plan.-short:before {
+  padding: 3px 3px
+}
+
+.modal-wrap .content-wrap .back-btn {
+  color: #aaa;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  cursor: pointer;
+  font-family: "Material Design Icons";
+  font-size: 20px;
+  padding: 10px
+}
+
+.modal-wrap.-mult:hover .content-wrap {
+  cursor: default;
+  height: 300px
+}
+
+.modal-wrap:after {
+  display: none
+}
+
+.WebCalender {
+  position: relative
 }
 
 .WebCalender .year-month-wrap {
@@ -426,7 +547,52 @@ li {
 .WebCalender .calender-wrap .days-wrap .item .plan.-short {
   display: block;
   height: calc(1em + 6px);
+  padding: 3px 0;
+  display: block;
+  height: calc(1em + 6px);
   padding: 3px 0
+}
+
+.WebCalender .calender-wrap .days-wrap .item .plan.-short:before {
+  content: '';
+  background-color: #EA7979;
+  border-radius: 4px;
+  padding: 2px 3px;
+  margin-right: 4px;
+  height: 8px;
+  width: 8px
+}
+
+.WebCalender .calender-wrap .days-wrap .item .plan.-short.-red:before {
+  background-color: #EA7979
+}
+
+.WebCalender .calender-wrap .days-wrap .item .plan.-short.-orange:before {
+  background-color: #F8A748
+}
+
+.WebCalender .calender-wrap .days-wrap .item .plan.-short.-yellow:before {
+  background-color: #F2E32D
+}
+
+.WebCalender .calender-wrap .days-wrap .item .plan.-short.-light-green:before {
+  background-color: #88D64E
+}
+
+.WebCalender .calender-wrap .days-wrap .item .plan.-short.-green:before {
+  background-color: #29C48F
+}
+
+.WebCalender .calender-wrap .days-wrap .item .plan.-short.-sky-blue:before {
+  background-color: #6FD2F0
+}
+
+.WebCalender .calender-wrap .days-wrap .item .plan.-short.-blue:before {
+  background-color: #7979FF
+}
+
+.WebCalender .calender-wrap .days-wrap .item .plan.-short.-purple:before {
+  background-color: #BB76E6
 }
 
 .WebCalender .calender-wrap .days-wrap .item .plan.-short:before {
@@ -485,69 +651,68 @@ li {
   border-radius: 5px;
   position: absolute;
   left: -2px;
+  width: 100%;
   z-index: 10
 }
 
 .WebCalender .calender-wrap .days-wrap .item .plan.-long.-red span {
-  background-color: #EA7979;
-  color: #EA7979
+  background-color: #EA7979
 }
 
 .WebCalender .calender-wrap .days-wrap .item .plan.-long.-orange span {
-  background-color: #F8A748;
-  color: #F8A748
+  background-color: #F8A748
 }
 
 .WebCalender .calender-wrap .days-wrap .item .plan.-long.-yellow span {
-  background-color: #F2E32D;
-  color: #F2E32D
+  background-color: #F2E32D
 }
 
 .WebCalender .calender-wrap .days-wrap .item .plan.-long.-light-green span {
-  background-color: #88D64E;
-  color: #88D64E
+  background-color: #88D64E
 }
 
 .WebCalender .calender-wrap .days-wrap .item .plan.-long.-green span {
-  background-color: #29C48F;
-  color: #29C48F
+  background-color: #29C48F
 }
 
 .WebCalender .calender-wrap .days-wrap .item .plan.-long.-sky-blue span {
-  background-color: #6FD2F0;
-  color: #6FD2F0
+  background-color: #6FD2F0
 }
 
 .WebCalender .calender-wrap .days-wrap .item .plan.-long.-blue span {
-  background-color: #7979FF;
-  color: #7979FF
+  background-color: #7979FF
 }
 
 .WebCalender .calender-wrap .days-wrap .item .plan.-long.-purple span {
-  background-color: #BB76E6;
-  color: #BB76E6
+  background-color: #BB76E6
 }
 
-.WebCalender .calender-wrap .days-wrap .item .plan.-long.-start span {
-  border-radius: 5px 0 0 5px;
-  color: #fff;
-  width: calc(140px - 2px)
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-l1 span {
+  width: calc(140px * 1 - 4px)
 }
 
-.WebCalender .calender-wrap .days-wrap .item .plan.-long.-middle span {
-  width: 140px;
-  left: -4px;
-  border-radius: unset
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-l2 span {
+  width: calc(140px * 2 - 4px)
 }
 
-.WebCalender .calender-wrap .days-wrap .item .plan.-long.-end span {
-  border-radius: 0 5px 5px 0;
-  left: -4px;
-  width: calc(140px - 2px)
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-l3 span {
+  width: calc(140px * 3 - 4px)
 }
 
-.WebCalender .calender-wrap .days-wrap .item .plan.-long.-alone span {
-  width: calc(140px - 4px)
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-l4 span {
+  width: calc(140px * 4 - 4px)
+}
+
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-l5 span {
+  width: calc(140px * 5 - 4px)
+}
+
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-l6 span {
+  width: calc(140px * 6 - 4px)
+}
+
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-l7 span {
+  width: calc(140px * 7 - 4px)
 }
 
 .WebCalender .calender-wrap .days-wrap .item .time {
@@ -619,97 +784,6 @@ li {
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16);
   -webkit-transition: .3s;
   transition: .3s
-}
-
-.WebCalender .calender-wrap .days-wrap .item.-open .content-wrap {
-  position: absolute;
-  min-width: 245px;
-  height: 300px;
-  -webkit-box-shadow: 0 3px 6px #00000029;
-  box-shadow: 0 3px 6px #00000029;
-  padding: 14px 10px 10px;
-  z-index: 30
-}
-
-.WebCalender .calender-wrap .days-wrap .item.-open .content-wrap .day {
-  color: #333;
-  background-color: #fff;
-  font-size: 14px;
-  margin: 10px 0 14px;
-  width: 100%
-}
-
-.WebCalender .calender-wrap .days-wrap .item.-open .content-wrap .plan {
-  font-size: 14px;
-  margin-bottom: 10px
-}
-
-.WebCalender .calender-wrap .days-wrap .item.-open .content-wrap .plan.-long {
-  display: none
-}
-
-.WebCalender .calender-wrap .days-wrap .item.-open .content-wrap .plan.-long-op {
-  color: #fff;
-  display: block;
-  width: 100%;
-  border-radius: 5px;
-  padding: 6px 14px
-}
-
-.WebCalender .calender-wrap .days-wrap .item.-open .content-wrap .plan.-long-op.-red {
-  background-color: #EA7979
-}
-
-.WebCalender .calender-wrap .days-wrap .item.-open .content-wrap .plan.-long-op.-orange {
-  background-color: #F8A748
-}
-
-.WebCalender .calender-wrap .days-wrap .item.-open .content-wrap .plan.-long-op.-yellow {
-  background-color: #F2E32D
-}
-
-.WebCalender .calender-wrap .days-wrap .item.-open .content-wrap .plan.-long-op.-light-green {
-  background-color: #88D64E
-}
-
-.WebCalender .calender-wrap .days-wrap .item.-open .content-wrap .plan.-long-op.-green {
-  background-color: #29C48F
-}
-
-.WebCalender .calender-wrap .days-wrap .item.-open .content-wrap .plan.-long-op.-sky-blue {
-  background-color: #6FD2F0
-}
-
-.WebCalender .calender-wrap .days-wrap .item.-open .content-wrap .plan.-long-op.-blue {
-  background-color: #7979FF
-}
-
-.WebCalender .calender-wrap .days-wrap .item.-open .content-wrap .plan.-long-op.-purple {
-  background-color: #BB76E6
-}
-
-.WebCalender .calender-wrap .days-wrap .item.-open .content-wrap .plan.-short:before {
-  padding: 3px 3px
-}
-
-.WebCalender .calender-wrap .days-wrap .item.-open .content-wrap .back-btn {
-  color: #aaa;
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  cursor: pointer;
-  font-family: "Material Design Icons";
-  font-size: 20px;
-  padding: 10px
-}
-
-.WebCalender .calender-wrap .days-wrap .item.-open.-mult:hover .content-wrap {
-  cursor: default;
-  height: 300px
-}
-
-.WebCalender .calender-wrap .days-wrap .item.-open:after {
-  display: none
 }
 
 .WebCalender .calender-wrap .days-wrap .item.-weekstart .plan.-long span {
