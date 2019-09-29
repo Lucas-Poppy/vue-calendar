@@ -51,13 +51,16 @@
           <div v-for="day in calendarData" :key="day.index" class="item">
             <div class="content-wrap">
               <span class="day">{{dayFormat(day)}}</span>
-              <span v-for="plan in longPlans(day)"
+              <span v-for="plan in longPlans[day]"
                :key="plan.index"
                class="plan -long -blue"
-               :class="longPlanStatus(plan, day)">
+               :class="longPlanStyleClass(plan, day)">
                 <span>{{ plan.title }}</span>
               </span>
-              <span v-for="plan in dayPlans(day)" :key="plan.index" class="plan -short" :class="colorClass(plan.index)">
+              <span v-for="(plan, index) in dayPlans[day]"
+               :key="index"
+               class="plan -short"
+               :class="shortPlanStyleClass(index, day)">
                 <span class="time">{{plan.start_time}}</span>{{plan.name}}
               </span>
             </div>
@@ -95,7 +98,9 @@ export default {
         day: '',
         title: '',
         plans: []
-      }
+      },
+      duplicateCount: {}, // どの日付に何個のプランが重複しているか
+      planIndex: {}
     }
   },
   methods: {
@@ -112,12 +117,6 @@ export default {
       this.current--
     },
     /**
-     * 指定された日のプランのみを返す
-     */
-    dayPlans (date) {
-      return this.day_plans.filter(x => x.day === date)
-    },
-    /**
      * カラー用のクラスを返す
      */
     colorClass (number) {
@@ -128,19 +127,6 @@ export default {
      */
     dayFormat (date) {
       return moment(date, 'YYYYMMDD').format('DD')
-    },
-    /**
-     * 指定された日に存在する長期予定を返す
-     */
-    longPlans (date) {
-      const todayPlans = this.long_plans.filter(x => (x.start_date === date))
-      if (!this.isWeekStart(date)) {
-        return todayPlans
-      }
-      const plansInTime = this.long_plans.filter(x => (x.start_date <= date && x.end_date >= date))
-      const result = _.uniqBy([...todayPlans, ...plansInTime], 'id')
-
-      return result
     },
     /**
      * その週のどこまで長期講習を表示させるか計算してクラス名を返す
@@ -169,30 +155,94 @@ export default {
     dateDifference (date1, date2) {
       const diffInDays = moment(date1, 'YYYYMMDD').diff(moment(date2, 'YYYYMMDD'), 'days')
       return Math.abs(diffInDays)
+    },
+    shortPlanStyleClass (planIndex, date) {
+      console.log(planIndex)
+      let style = this.colorClass(planIndex)
+      // 期間重複数
+      let duplicateCount = this.duplicateCount[date]
+      let margin = 1
+      for (let i = 1; i <= duplicateCount + 1; i++) {
+        // planIndexに存在するIndexは使わない
+        if (this.planIndex[date].find(item => item === i)) {
+          continue
+        }
+        margin = i
+        this.fillPlanIndex(date, 1, i)
+        break
+      }
+      return `${style} -top${margin}`
+    },
+    /**
+     * 長期講習に付与するclassをまとめるメソッド
+     */
+    longPlanStyleClass (longPlan, date) {
+      let style = this.longPlanStatus(longPlan, date)
+      // 期間重複数
+      let duplicateCount = this.duplicateCount[date]
+      let margin = 1
+      for (let i = 1; i <= duplicateCount + 1; i++) {
+        // planIndexに存在するIndexは使わない
+        if (this.planIndex[date].find(item => item === i)) {
+          continue
+        }
+        margin = i
+        // 指定された日付から何日間あるか
+        const dateDiff = this.dateDifference(date, longPlan.end_date) + 1
+        let j = 0
+        // 来週に跨いでいた場合
+        if (7 - this.weekDay(date) < dateDiff) {
+          j = 7 - this.weekDay(date)
+        } else {
+          j = dateDiff
+        }
+        this.fillPlanIndex(date, j, i)
+        break
+      }
+      return `${style} -top${margin}`
+    },
+    /**
+     * 長期期間の時に他の日のplanIndexを埋めていく
+     * date 夏期講習の要素が入る日
+     * num その週の夏期講習の入る期間
+     * index その日に使っている連番の数値
+     */
+    fillPlanIndex (date, num, index) {
+      for (let i = 0; i < num; i++) {
+        this.planIndex[moment(date, 'YYYYMMDD').add(i, 'days').format('YYYYMMDD')].push(index)
+      }
+    },
+    /**
+     * computedに書けばいいのかメソッドに書けばいいのか迷い中
+     */
+    planCount () {
+      let planCount = {}
+      Object.keys(this.longPlans2).forEach(date => {
+        planCount[date] = 0
+        this.planIndex[date] = []
+        this.longPlans2[date].forEach(() => planCount[date]++)
+      })
+      Object.keys(this.dayPlans).forEach(date => {
+        this.dayPlans[date].forEach(() => planCount[date]++)
+      })
+      this.duplicateCount = planCount
+      this.loopDuplicateCount = planCount
     }
-    // /**
-    //  * その週の開始日を取得する 使うかわからん
-    //  */
-    // weeklyStartDate (date, longPlan) {
-    //   // その週の日曜日と何日差があるか取得
-    //   const diffSunDay = moment(date, 'YYYYMMDD').day()
-    //   // 長期講習の開始日と何日差があるか取得
-    //   const diffInDays = moment(date, 'YYYYMMDD').diff(moment(longPlan.start_date, 'YYYYMMDD'), 'days')
-    //   if (diffSunDay >= diffInDays) {
-    //     return moment(longPlan.start_date, 'YYYYMMDD').format('YYYYMMDD')
-    //   }
-    //   return moment(date, 'YYYYMMDD').add(diffSunDay, 'days').format('YYYYMMDD')
-    // }
-
   },
   created () {
     this.long_plans = [
       {id: 1, start_date: '20191012', end_date: '20191024', title: '長期講習1'},
-      {id: 2, start_date: '20191023', end_date: '20191027', title: 'hogehoge'}
+      {id: 2, start_date: '20191019', end_date: '20191027', title: 'hogehoge'}
     ]
     this.day_plans = [
-      {id: 1, day: '20191015', start_time: '19:00', end_time: '21:00', name: '数学'}
+      {id: 1, day: '20191022', start_time: '19:00', end_time: '21:00', name: '数学'}
     ]
+    this.planCount()
+  },
+  watch: {
+    current (val) {
+      this.planCount()
+    }
   },
   computed: {
     currentMoment () {
@@ -229,8 +279,48 @@ export default {
       const list = result.reduce((pre, current) => { pre.push(...current); return pre }, [])
       return list
     },
-    dateFormat (dateObject) {
-      return ''
+    /**
+     * 日ごとに存在する長期予定を返す
+     */
+    longPlans () {
+      let longPlans = {}
+      this.calendarData.map((date, index, array) => {
+        const todayPlans = this.long_plans.filter(x => (x.start_date === date))
+        const plansInTime = this.long_plans.filter(x => (x.start_date <= date && x.end_date >= date))
+        const result = _.uniqBy([...todayPlans, ...plansInTime], 'id')
+        // this.$set(this.planCount, date, (this.planCount[date] | 0) + result.length)
+        if (!this.isWeekStart(date)) {
+          longPlans[date] = todayPlans
+          return
+        }
+        longPlans[date] = result
+      })
+      return longPlans
+    },
+    /**
+     * 微妙だけど。。。planCount用にもう一つ作る
+     */
+    longPlans2 () {
+      let longPlans = {}
+      this.calendarData.map((date, index, array) => {
+        const todayPlans = this.long_plans.filter(x => (x.start_date === date))
+        const plansInTime = this.long_plans.filter(x => (x.start_date <= date && x.end_date >= date))
+        const result = _.uniqBy([...todayPlans, ...plansInTime], 'id')
+        longPlans[date] = result
+      })
+      return longPlans
+    },
+    /**
+     * 日ごとのプランを計算
+    */
+    dayPlans () {
+      let daysPlans = {}
+      this.calendarData.map((date, index, array) => {
+        const dayPlans = this.day_plans.filter(x => x.day === date)
+        // this.$set(this.planCount, date, (this.planCount[date] | 0) + dayPlans.length)
+        daysPlans[date] = dayPlans
+      })
+      return daysPlans
     }
   }
 }
@@ -243,6 +333,24 @@ export default {
   box-sizing: border-box;
   color: #333;
   font-family: 'Hiragino Kaku Gothic ProN', 'ヒラギノ角ゴ ProN W3', sans-serif
+}
+.-top1 {
+  top :0px;
+}
+.-top2 {
+  top :calc(1em + 8px);
+}
+.-top3 {
+  top :calc(2em + 16px);
+}
+.-top4 {
+  top :calc(3em + 24px);
+}
+.-top5 {
+  top :calc(4em + 32px);
+}
+.-top6 {
+  top :calc(5em + 40px);
 }
 
 .container {
@@ -258,7 +366,7 @@ export default {
 .modal-wrap {
   position: absolute;
   top: 0px;
-  left: 0px
+  left: 800px
 }
 
 .modal-wrap .content-wrap {
