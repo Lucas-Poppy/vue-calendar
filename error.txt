@@ -1,0 +1,3 @@
+TODO
+modal生成時になぜかdays-wrapが生成しなおされている
+modal-wrapが無ければなぜか生成しなおされない

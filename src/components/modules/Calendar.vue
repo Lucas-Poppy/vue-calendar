@@ -1,15 +1,19 @@
 <template>
-  <div class="container">
-    <div class="modal-wrap">
+  <div class="container" ref="container">
+    <!-- <div class="modal-wrap"> -->
+    <div class="modal-wrap" :style="modalStyle">
       <div class="content-wrap">
         <span class="day">{{modalDay.day}}</span>
-        <span class="plan -long -blue">
-          <span>{{modalDay.title}}</span>
+        <span v-for="plan in modalDay.longPlans"
+        :key="plan.index"
+        class="plan -long -blue"
+        :class="modalStyleClass()">
+          {{ plan.title }}
         </span>
         <span v-for="plan in modalDay.plans" class="plan -short" :key="plan.index" :class="colorClass(plan.index)">
           <span class="time">{{plan.start_time}}</span>{{plan.name}}
         </span>
-        <span class="back-btn"></span>
+        <span class="back-btn" @click="close"></span>
       </div>
     </div>
     <div class="WebCalender">
@@ -35,7 +39,7 @@
             <span>火</span>
           </div>
           <div class="item">
-            <span>水</span>
+            <span @click="hoge2">水{{hoge()}}</span>
           </div>
           <div class="item">
             <span>木</span>
@@ -48,21 +52,23 @@
           </div>
         </div>
         <div class="days-wrap">
-          <div v-for="day in calendarData" :key="day.index" class="item">
+          <div v-for="day in calendarData" :key="day.index" class="item" :class="{'-mult': isMulti(day)}" :ref="`id_${day}`" @click="detailPlan($event, day)">
             <div class="content-wrap">
               <span class="day">{{dayFormat(day)}}</span>
-              <span v-for="plan in longPlans[day]"
-               :key="plan.index"
-               class="plan -long -blue"
-               :class="longPlanStyleClass(plan, day)">
-                <span>{{ plan.title }}</span>
-              </span>
-              <span v-for="(plan, index) in dayPlans[day]"
-               :key="index"
-               class="plan -short"
-               :class="shortPlanStyleClass(index, day)">
-                <span class="time">{{plan.start_time}}</span>{{plan.name}}
-              </span>
+              <div class="plan-wrap">
+                <span v-for="plan in longPlans[day]"
+                :key="plan.index"
+                class="plan -long -blue"
+                :class="longPlanStyleClass(plan, day)">
+                {{ plan.title }}
+                </span>
+                <span v-for="(plan, index) in dayPlans[day]"
+                :key="index"
+                class="plan -short"
+                :class="shortPlanStyleClass(index, day)">
+                  <span class="time">{{plan.start_time}}</span>{{plan.name}}
+                </span>
+              </div>
             </div>
           </div>
           <!-- <div class="item -weekstart -mult -today">
@@ -90,20 +96,36 @@ export default {
   data () {
     return {
       selectedDate: null, // 今選択している日付,
-      current: 1,
+      current: 0,
       long_plans: [],
       day_plans: [],
       color: ['-red', '-orange', '-yellow', '-light-green', '-green', '-sky-blue', '-blue', '-purple'],
       modalDay: {
         day: '',
         title: '',
-        plans: []
+        plans: [],
+        longPlans: [],
+        topStyle: 1
       },
       duplicateCount: {}, // どの日付に何個のプランが重複しているか
-      planIndex: {}
+      planIndex: {},
+      modalStyle: {
+        display: 'none',
+        top: '0px',
+        left: '0px',
+        'z-index': -10
+      }
     }
   },
   methods: {
+    hoge () {
+      console.log('hoge')
+    },
+    hoge2 () {
+      console.log('hoge2')
+      this.$set(this.modalDay, 'day', '20191015')
+      this.$set(this.modalStyle, 'z-index', 200)
+    },
     /**
      * 来月のカレンダーを表示する
      */
@@ -157,7 +179,6 @@ export default {
       return Math.abs(diffInDays)
     },
     shortPlanStyleClass (planIndex, date) {
-      console.log(planIndex)
       let style = this.colorClass(planIndex)
       // 期間重複数
       let duplicateCount = this.duplicateCount[date]
@@ -202,6 +223,13 @@ export default {
       return `${style} -top${margin}`
     },
     /**
+     * modalのプランに付与するclassをまとめるメソッド
+     */
+    modalStyleClass () {
+      this.$set(this.modalDay, 'topStyle', this.modalDay.topStyle + 1)
+      return `-top${this.modalDay.topStyle - 1}`
+    },
+    /*
      * 長期期間の時に他の日のplanIndexを埋めていく
      * date 夏期講習の要素が入る日
      * num その週の夏期講習の入る期間
@@ -217,16 +245,48 @@ export default {
      */
     planCount () {
       let planCount = {}
-      Object.keys(this.longPlans2).forEach(date => {
+      Object.keys(this.longPlansAll).forEach(date => {
         planCount[date] = 0
         this.planIndex[date] = []
-        this.longPlans2[date].forEach(() => planCount[date]++)
+        this.longPlansAll[date].forEach(() => planCount[date]++)
       })
       Object.keys(this.dayPlans).forEach(date => {
         this.dayPlans[date].forEach(() => planCount[date]++)
       })
       this.duplicateCount = planCount
       this.loopDuplicateCount = planCount
+    },
+    detailPlan (event, date) {
+      if (this.duplicateCount[date] === 0) {
+        return ''
+      }
+      // クリックした親要素のobject
+      let obj = this.$refs[`id_${date}`][0].getBoundingClientRect()
+      let x = obj.x + document.documentElement.scrollLeft - (this.$refs.container.getBoundingClientRect().x + 1)
+      let y = obj.y + document.documentElement.scrollTop
+      // this.$set(this.modalStyle, 'top', `${y}px`)
+      // this.$set(this.modalStyle, 'left', `${x}px`)
+      // this.$set(this.modalStyle, 'display', 'block')
+      // this.$set(this.modalStyle, 'z-index', 200)
+      console.log(this.modalStyle)
+      this.modalStyle.top = `${y}px`
+      this.modalStyle.left = `${x}px`
+      this.modalStyle.display = 'block'
+      this.modalStyle['z-index'] = 200
+      // this.$set(this.modalDay, 'day', date)
+      // this.$set(this.modalDay, 'plans', this.dayPlans[date])
+      // this.$set(this.modalDay, 'longPlans', this.longPlansAll[date])
+      this.modalDay.day = date
+      this.modalDay.plans = this.dayPlans[date]
+      this.modalDay.longPlans = this.longPlansAll[date]
+      console.log('detailPlan')
+    },
+    close () {
+      this.$set(this.modalStyle, 'display', 'none')
+    },
+    isMulti (date) {
+      console.log('isMulti')
+      return this.duplicateCount[date] > 0
     }
   },
   created () {
@@ -280,7 +340,7 @@ export default {
       return list
     },
     /**
-     * 日ごとに存在する長期予定を返す
+     * 日ごとに(カレンダーの要素的に)存在する長期予定を返す
      */
     longPlans () {
       let longPlans = {}
@@ -288,7 +348,6 @@ export default {
         const todayPlans = this.long_plans.filter(x => (x.start_date === date))
         const plansInTime = this.long_plans.filter(x => (x.start_date <= date && x.end_date >= date))
         const result = _.uniqBy([...todayPlans, ...plansInTime], 'id')
-        // this.$set(this.planCount, date, (this.planCount[date] | 0) + result.length)
         if (!this.isWeekStart(date)) {
           longPlans[date] = todayPlans
           return
@@ -298,17 +357,17 @@ export default {
       return longPlans
     },
     /**
-     * 微妙だけど。。。planCount用にもう一つ作る
+     * 日ごとに(データ的に)存在する長期予定を返す
      */
-    longPlans2 () {
-      let longPlans = {}
+    longPlansAll () {
+      let longPlansAll = {}
       this.calendarData.map((date, index, array) => {
         const todayPlans = this.long_plans.filter(x => (x.start_date === date))
         const plansInTime = this.long_plans.filter(x => (x.start_date <= date && x.end_date >= date))
         const result = _.uniqBy([...todayPlans, ...plansInTime], 'id')
-        longPlans[date] = result
+        longPlansAll[date] = result
       })
-      return longPlans
+      return longPlansAll
     },
     /**
      * 日ごとのプランを計算
@@ -317,7 +376,6 @@ export default {
       let daysPlans = {}
       this.calendarData.map((date, index, array) => {
         const dayPlans = this.day_plans.filter(x => x.day === date)
-        // this.$set(this.planCount, date, (this.planCount[date] | 0) + dayPlans.length)
         daysPlans[date] = dayPlans
       })
       return daysPlans
@@ -334,24 +392,6 @@ export default {
   color: #333;
   font-family: 'Hiragino Kaku Gothic ProN', 'ヒラギノ角ゴ ProN W3', sans-serif
 }
-.-top1 {
-  top :0px;
-}
-.-top2 {
-  top :calc(1em + 8px);
-}
-.-top3 {
-  top :calc(2em + 16px);
-}
-.-top4 {
-  top :calc(3em + 24px);
-}
-.-top5 {
-  top :calc(4em + 32px);
-}
-.-top6 {
-  top :calc(5em + 40px);
-}
 
 .container {
   position: relative;
@@ -361,180 +401,6 @@ export default {
   border-left: solid 1px #ccc;
   border-right: solid 1px #ccc;
   padding: 64px calc((1080px - 986px) / 2) 0
-}
-
-.modal-wrap {
-  position: absolute;
-  top: 0px;
-  left: 800px
-}
-
-.modal-wrap .content-wrap {
-  background-color: #fff;
-  border-radius: 5px;
-  width: 136px;
-  height: 116px;
-  padding: 6px 2px;
-  -webkit-transition: .3s;
-  transition: .3s;
-  position: absolute;
-  min-width: 245px;
-  height: 300px;
-  -webkit-box-shadow: 0 3px 6px #00000029;
-  box-shadow: 0 3px 6px #00000029;
-  padding: 14px 10px 10px;
-  z-index: 40
-}
-
-.modal-wrap .content-wrap .day {
-  display: block;
-  color: #666;
-  font-size: 12px;
-  font-family: "Roboto Condensed", sans-serif;
-  text-align: center;
-  line-height: 16px;
-  margin: 0 auto 3px;
-  width: 16px;
-  z-index: 10;
-  color: #333;
-  background-color: #fff;
-  font-size: 14px;
-  margin: 10px 0 14px;
-  width: 100%
-}
-
-.modal-wrap .content-wrap .plan {
-  font-size: 14px;
-  margin-bottom: 10px
-}
-
-.modal-wrap .content-wrap .plan.-long {
-  position: relative;
-  display: block;
-  width: 100%;
-  height: calc(1em + 6px)
-}
-
-.modal-wrap .content-wrap .plan.-long span {
-  background-color: #EA7979;
-  color: #fff;
-  padding: 3px 10px;
-  border-radius: 5px;
-  position: absolute;
-  left: -2px;
-  width: 100%;
-  z-index: 10
-}
-
-.modal-wrap .content-wrap .plan.-long.-red span {
-  background-color: #EA7979
-}
-
-.modal-wrap .content-wrap .plan.-long.-orange span {
-  background-color: #F8A748
-}
-
-.modal-wrap .content-wrap .plan.-long.-yellow span {
-  background-color: #F2E32D
-}
-
-.modal-wrap .content-wrap .plan.-long.-light-green span {
-  background-color: #88D64E
-}
-
-.modal-wrap .content-wrap .plan.-long.-green span {
-  background-color: #29C48F
-}
-
-.modal-wrap .content-wrap .plan.-long.-sky-blue span {
-  background-color: #6FD2F0
-}
-
-.modal-wrap .content-wrap .plan.-long.-blue span {
-  background-color: #7979FF
-}
-
-.modal-wrap .content-wrap .plan.-long.-purple span {
-  background-color: #BB76E6
-}
-
-.modal-wrap .content-wrap .plan.-short {
-  display: block;
-  height: calc(1em + 6px);
-  padding: 3px 0
-}
-
-.modal-wrap .content-wrap .plan.-short:before {
-  content: '';
-  background-color: #EA7979;
-  border-radius: 4px;
-  padding: 2px 3px;
-  margin-right: 4px;
-  height: 8px;
-  width: 8px
-}
-
-.modal-wrap .content-wrap .plan.-short.-red:before {
-  background-color: #EA7979
-}
-
-.modal-wrap .content-wrap .plan.-short.-orange:before {
-  background-color: #F8A748
-}
-
-.modal-wrap .content-wrap .plan.-short.-yellow:before {
-  background-color: #F2E32D
-}
-
-.modal-wrap .content-wrap .plan.-short.-light-green:before {
-  background-color: #88D64E
-}
-
-.modal-wrap .content-wrap .plan.-short.-green:before {
-  background-color: #29C48F
-}
-
-.modal-wrap .content-wrap .plan.-short.-sky-blue:before {
-  background-color: #6FD2F0
-}
-
-.modal-wrap .content-wrap .plan.-short.-blue:before {
-  background-color: #7979FF
-}
-
-.modal-wrap .content-wrap .plan.-short.-purple:before {
-  background-color: #BB76E6
-}
-
-.modal-wrap .content-wrap .plan.-short .time {
-  font-family: "Roboto Condensed", sans-serif;
-  font-weight: bold;
-  color: #999;
-  margin-right: 6px
-}
-
-.modal-wrap .content-wrap .plan.-short:before {
-  padding: 3px 3px
-}
-
-.modal-wrap .content-wrap .back-btn {
-  color: #aaa;
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  cursor: pointer;
-  font-family: "Material Design Icons";
-  font-size: 20px;
-  padding: 10px
-}
-
-.modal-wrap.-mult:hover .content-wrap {
-  cursor: default;
-  height: 300px
-}
-
-.modal-wrap:after {
-  display: none
 }
 
 .WebCalender {
@@ -616,9 +482,20 @@ export default {
 }
 
 .WebCalender .calender-wrap .days-wrap .item {
+  position: relative;
   margin: 2px;
   width: 136px;
   height: 116px
+}
+
+.WebCalender .calender-wrap .days-wrap .item:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  z-index: 40
 }
 
 .WebCalender .calender-wrap .days-wrap .item .content-wrap {
@@ -647,15 +524,26 @@ export default {
   color: #aaa
 }
 
+.WebCalender .calender-wrap .days-wrap .item .plan-wrap {
+  position: relative;
+  height: 100%
+}
+
 .WebCalender .calender-wrap .days-wrap .item .plan {
+  position: absolute;
+  top: 0;
   font-size: 12px;
-  margin-bottom: 2px
+  margin-bottom: 2px;
+  height: calc(1em + 6px)
 }
 
 .WebCalender .calender-wrap .days-wrap .item .plan.-short {
   display: block;
-  height: calc(1em + 6px);
+  width: 100%;
+  overflow: hidden;
   padding: 3px 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   display: block;
   height: calc(1em + 6px);
   padding: 3px 0
@@ -746,81 +634,89 @@ export default {
 }
 
 .WebCalender .calender-wrap .days-wrap .item .plan.-long {
-  position: relative;
-  display: block;
-  width: 100%;
-  height: calc(1em + 6px)
-}
-
-.WebCalender .calender-wrap .days-wrap .item .plan.-long span {
+  left: -2px;
   background-color: #EA7979;
+  border-radius: 5px;
   color: #fff;
   padding: 3px 10px;
-  border-radius: 5px;
-  position: absolute;
-  left: -2px;
   width: 100%;
   z-index: 10
 }
 
-.WebCalender .calender-wrap .days-wrap .item .plan.-long.-red span {
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-red {
   background-color: #EA7979
 }
 
-.WebCalender .calender-wrap .days-wrap .item .plan.-long.-orange span {
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-orange {
   background-color: #F8A748
 }
 
-.WebCalender .calender-wrap .days-wrap .item .plan.-long.-yellow span {
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-yellow {
   background-color: #F2E32D
 }
 
-.WebCalender .calender-wrap .days-wrap .item .plan.-long.-light-green span {
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-light-green {
   background-color: #88D64E
 }
 
-.WebCalender .calender-wrap .days-wrap .item .plan.-long.-green span {
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-green {
   background-color: #29C48F
 }
 
-.WebCalender .calender-wrap .days-wrap .item .plan.-long.-sky-blue span {
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-sky-blue {
   background-color: #6FD2F0
 }
 
-.WebCalender .calender-wrap .days-wrap .item .plan.-long.-blue span {
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-blue {
   background-color: #7979FF
 }
 
-.WebCalender .calender-wrap .days-wrap .item .plan.-long.-purple span {
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-purple {
   background-color: #BB76E6
 }
 
-.WebCalender .calender-wrap .days-wrap .item .plan.-long.-l1 span {
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-l1 {
   width: calc(140px * 1 - 4px)
 }
 
-.WebCalender .calender-wrap .days-wrap .item .plan.-long.-l2 span {
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-l2 {
   width: calc(140px * 2 - 4px)
 }
 
-.WebCalender .calender-wrap .days-wrap .item .plan.-long.-l3 span {
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-l3 {
   width: calc(140px * 3 - 4px)
 }
 
-.WebCalender .calender-wrap .days-wrap .item .plan.-long.-l4 span {
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-l4 {
   width: calc(140px * 4 - 4px)
 }
 
-.WebCalender .calender-wrap .days-wrap .item .plan.-long.-l5 span {
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-l5 {
   width: calc(140px * 5 - 4px)
 }
 
-.WebCalender .calender-wrap .days-wrap .item .plan.-long.-l6 span {
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-l6 {
   width: calc(140px * 6 - 4px)
 }
 
-.WebCalender .calender-wrap .days-wrap .item .plan.-long.-l7 span {
+.WebCalender .calender-wrap .days-wrap .item .plan.-long.-l7 {
   width: calc(140px * 7 - 4px)
+}
+
+.WebCalender .calender-wrap .days-wrap .item .plan.-top1 {
+  top: 0
+}
+
+.WebCalender .calender-wrap .days-wrap .item .plan.-top2 {
+  top: calc(1em + 8px)
+}
+
+.WebCalender .calender-wrap .days-wrap .item .plan.-top3 {
+  top: calc(2 * (1em + 8px))
+}
+
+.WebCalender .calender-wrap .days-wrap .item .plan.-top4 {
+  top: calc(3 * (1em + 8px))
 }
 
 .WebCalender .calender-wrap .days-wrap .item .time {
@@ -894,14 +790,185 @@ export default {
   transition: .3s
 }
 
-.WebCalender .calender-wrap .days-wrap .item.-weekstart .plan.-long span {
-  color: #fff
-}
-
 .WebCalender .calender-wrap .days-wrap .-today .day {
   background-color: #7979FF;
   border-radius: 8px;
   color: #fff
+}
+
+.modal-wrap {
+  position: absolute
+}
+
+.modal-wrap .content-wrap {
+  background-color: #fff;
+  border-radius: 5px;
+  width: 136px;
+  height: 116px;
+  padding: 6px 2px;
+  -webkit-transition: .3s;
+  transition: .3s;
+  position: absolute;
+  min-width: 245px;
+  min-height: 300px;
+  -webkit-box-shadow: 0 3px 6px #00000029;
+  box-shadow: 0 3px 6px #00000029;
+  padding: 14px 10px 10px;
+  z-index: 100
+}
+
+.modal-wrap .content-wrap .day {
+  display: block;
+  color: #666;
+  font-size: 12px;
+  font-family: "Roboto Condensed", sans-serif;
+  text-align: center;
+  line-height: 16px;
+  margin: 0 auto 3px;
+  width: 16px;
+  z-index: 10;
+  color: #333;
+  background-color: #fff;
+  font-size: 14px;
+  margin: 10px 0 14px;
+  width: 100%
+}
+
+.modal-wrap .content-wrap .plan {
+  position: static;
+  height: auto;
+  font-size: 14px;
+  margin-bottom: 10px
+}
+
+.modal-wrap .content-wrap .plan.-long {
+  left: -2px;
+  background-color: #EA7979;
+  border-radius: 5px;
+  color: #fff;
+  padding: 3px 10px;
+  width: 100%;
+  z-index: 10;
+  display: block;
+  position: static;
+  padding: 5px 10px
+}
+
+.modal-wrap .content-wrap .plan.-long.-red {
+  background-color: #EA7979
+}
+
+.modal-wrap .content-wrap .plan.-long.-orange {
+  background-color: #F8A748
+}
+
+.modal-wrap .content-wrap .plan.-long.-yellow {
+  background-color: #F2E32D
+}
+
+.modal-wrap .content-wrap .plan.-long.-light-green {
+  background-color: #88D64E
+}
+
+.modal-wrap .content-wrap .plan.-long.-green {
+  background-color: #29C48F
+}
+
+.modal-wrap .content-wrap .plan.-long.-sky-blue {
+  background-color: #6FD2F0
+}
+
+.modal-wrap .content-wrap .plan.-long.-blue {
+  background-color: #7979FF
+}
+
+.modal-wrap .content-wrap .plan.-long.-purple {
+  background-color: #BB76E6
+}
+
+.modal-wrap .content-wrap .plan.-short {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  padding: 3px 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  white-space: normal;
+  text-overflow: clip;
+  overflow: visible
+}
+
+.modal-wrap .content-wrap .plan.-short:before {
+  content: '';
+  background-color: #EA7979;
+  border-radius: 4px;
+  padding: 2px 3px;
+  margin-right: 4px;
+  height: 8px;
+  width: 8px
+}
+
+.modal-wrap .content-wrap .plan.-short.-red:before {
+  background-color: #EA7979
+}
+
+.modal-wrap .content-wrap .plan.-short.-orange:before {
+  background-color: #F8A748
+}
+
+.modal-wrap .content-wrap .plan.-short.-yellow:before {
+  background-color: #F2E32D
+}
+
+.modal-wrap .content-wrap .plan.-short.-light-green:before {
+  background-color: #88D64E
+}
+
+.modal-wrap .content-wrap .plan.-short.-green:before {
+  background-color: #29C48F
+}
+
+.modal-wrap .content-wrap .plan.-short.-sky-blue:before {
+  background-color: #6FD2F0
+}
+
+.modal-wrap .content-wrap .plan.-short.-blue:before {
+  background-color: #7979FF
+}
+
+.modal-wrap .content-wrap .plan.-short.-purple:before {
+  background-color: #BB76E6
+}
+
+.modal-wrap .content-wrap .plan.-short .time {
+  font-family: "Roboto Condensed", sans-serif;
+  font-weight: bold;
+  color: #999;
+  margin-right: 6px
+}
+
+.modal-wrap .content-wrap .plan.-short:before {
+  padding: 3px 3px
+}
+
+.modal-wrap .content-wrap .back-btn {
+  color: #aaa;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  cursor: pointer;
+  font-family: "Material Design Icons";
+  font-size: 20px;
+  padding: 10px
+}
+
+.modal-wrap.-mult:hover .content-wrap {
+  cursor: default;
+  height: 300px
+}
+
+.modal-wrap:after {
+  display: none
 }
 
 </style>

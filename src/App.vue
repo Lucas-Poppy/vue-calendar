@@ -1,6 +1,7 @@
 <template>
   <div id="app">
     <Calender></Calender>
+    <!-- <Hoge></Hoge> -->
   </div>
 </template>
 

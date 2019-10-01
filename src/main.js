@@ -4,10 +4,13 @@ import Vue from 'vue'
 import App from '@/App'
 import router from '@/router'
 import Calender from '@/components/modules/Calendar'
+import Hoge from '@/components/modules/Hoge'
+
 import '@/assets/css/reset.css'
 
 Vue.config.productionTip = false
 Vue.component('Calender', Calender)
+Vue.component('Hoge', Hoge)
 
 /* eslint-disable no-new */
 new Vue({
