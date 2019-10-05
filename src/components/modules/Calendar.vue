@@ -394,11 +394,11 @@ export default {
 .container {
   position: relative;
   width: 1080px;
-  height: 100vh;
+  height: 100%;
   margin: 0 auto;
   border-left: solid 1px #ccc;
   border-right: solid 1px #ccc;
-  padding: 64px calc((1080px - 986px) / 2) 0
+  padding: 64px calc((1080px - 986px) / 2)
 }
 
 .WebCalender {
@@ -638,7 +638,10 @@ export default {
   color: #fff;
   padding: 3px 10px;
   width: 100%;
-  z-index: 40
+  z-index: 40;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden
 }
 
 .WebCalender .calender-wrap .days-wrap .item .plan.-long.-red {
@@ -797,15 +800,15 @@ export default {
 
 .modal-wrap {
   position: absolute;
-  width: 146px;
-  height: 126px;
+  width: 245px;
+  height: 300px
 }
 
 .modal-wrap .content-wrap {
   background-color: #fff;
   border-radius: 5px;
-  width: 100%;
-  height: 100%;
+  width: 136px;
+  height: 116px;
   padding: 6px 2px;
   -webkit-transition: .3s;
   transition: .3s;
@@ -813,7 +816,9 @@ export default {
   -webkit-box-shadow: 0 3px 6px #00000029;
   box-shadow: 0 3px 6px #00000029;
   padding: 14px 10px 10px;
-  z-index: 100
+  z-index: 100;
+  width: 100%;
+  height: 100%
 }
 
 .modal-wrap .content-wrap .day {
@@ -848,9 +853,16 @@ export default {
   padding: 3px 10px;
   width: 100%;
   z-index: 40;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
   display: block;
   position: static;
-  padding: 5px 10px
+  padding: 5px 10px;
+  overflow: unset;
+  text-overflow: clip;
+  white-space: normal;
+  word-break: break-all
 }
 
 .modal-wrap .content-wrap .plan.-long.-red {
@@ -894,7 +906,8 @@ export default {
   white-space: nowrap;
   white-space: normal;
   text-overflow: clip;
-  overflow: visible
+  overflow: visible;
+  word-break: break-all
 }
 
 .modal-wrap .content-wrap .plan.-short:before {
