@@ -1,20 +1,21 @@
 <template>
   <div class="container" ref="container">
-    <!-- <div class="modal-wrap"> -->
-    <div class="modal-wrap" :style="modalStyle">
-      <div class="content-wrap">
-        <span class="day">{{dayFormat2(modalDay.day)}}</span>
-        <span v-for="plan in modalDay.longPlans"
-        :key="plan.index"
-        class="plan -long -blue">
-          {{ plan.title }}
-        </span>
-        <span v-for="plan in modalDay.plans" class="plan -short" :key="plan.index" :class="colorClass(plan.index)">
-          <span class="time">{{plan.start_time}}</span>{{plan.name}}
-        </span>
-        <span class="back-btn" @click="close"></span>
+    <transition>
+      <div class="modal-wrap" :style="modalStyle">
+        <div class="content-wrap">
+          <span class="day">{{dayFormat2(modalDay.day)}}</span>
+          <span v-for="plan in modalDay.longPlans"
+          :key="plan.index"
+          class="plan -long -blue">
+            {{ plan.title }}
+          </span>
+          <span v-for="plan in modalDay.plans" class="plan -short" :key="plan.index" :class="colorClass(plan.index)">
+            <span class="time">{{plan.start_time}}</span>{{plan.name}}
+          </span>
+          <span class="back-btn" @click="close"></span>
+        </div>
       </div>
-    </div>
+    </transition>
     <div class="WebCalender">
       <div class="year-month-wrap">
         <ul class="month-btn-list">
@@ -108,11 +109,22 @@ export default {
       duplicateCount: {}, // どの日付に何個のプランが重複しているか
       planIndex: {},
       modalStyle: {
-        display: 'none',
+        // display: 'none',
         top: '0px',
         left: '0px',
-        'z-index': -10
-      }
+        'z-index': -10,
+        transition: 'z-index 0.5s, height 1s, width 1s,opacity 1s ',
+        // transition: '.3s',
+        width: '146px',
+        height: '126px',
+        opacity: 0
+      },
+      modalMiniWidth: 146,
+      modalMiniHeight: 126,
+      modalMaxWidth: 245,
+      modalMaxHeight: 300,
+      transitionOn: 'z-index 0.5s, height 1s, width 1s,opacity 1s',
+      show: false
     }
   },
   methods: {
@@ -242,28 +254,39 @@ export default {
       this.duplicateCount = planCount
       this.loopDuplicateCount = planCount
     },
-    detailPlan (event, date) {
+    async detailPlan (event, date) {
       if (this.duplicateCount[date] === 0) {
         return ''
       }
+      await this.close(null, true)
       // クリックした親要素のobject
       let obj = this.$refs[`id_${date}`][0].getBoundingClientRect()
       let x = obj.x - (this.$refs.container.getBoundingClientRect().x + 1)
       let y = obj.y + document.documentElement.scrollTop
+      this.$set(this.modalStyle, 'transition', this.transitionOn)
       this.$set(this.modalStyle, 'top', `${y}px`)
       this.$set(this.modalStyle, 'left', `${x}px`)
-      this.$set(this.modalStyle, 'display', 'block')
+      this.$set(this.modalStyle, 'width', `${this.modalMaxWidth}px`)
+      this.$set(this.modalStyle, 'height', `${this.modalMaxHeight}px`)
+      this.$set(this.modalStyle, 'opacity', 1)
       this.$set(this.modalStyle, 'z-index', 200)
 
       this.$set(this.modalDay, 'day', date)
       this.$set(this.modalDay, 'plans', this.dayPlans[date])
       this.$set(this.modalDay, 'longPlans', this.longPlansAll[date])
+      this.show = true
     },
-    close (date = null) {
+    close (date = null, transitionOff = false) {
       if (date != null && date === this.modalDay.day) {
         return
       }
-      this.$set(this.modalStyle, 'display', 'none')
+      if (transitionOff) {
+        this.$delete(this.modalStyle, 'transition')
+      }
+      this.$set(this.modalStyle, 'width', `${this.modalMiniWidth}px`)
+      this.$set(this.modalStyle, 'height', `${this.modalMiniHeight}px`)
+      this.$set(this.modalStyle, 'z-index', -10)
+      this.$set(this.modalStyle, 'opacity', 0)
     },
     isMulti (date) {
       return this.duplicateCount[date] > 0
@@ -484,7 +507,7 @@ export default {
   left: 0;
   height: 100%;
   width: 100%;
-  z-index: 40
+  z-index: 50
 }
 
 .WebCalender .calender-wrap .days-wrap .item .content-wrap {
@@ -629,7 +652,7 @@ export default {
   color: #fff;
   padding: 3px 10px;
   width: 100%;
-  z-index: 10
+  z-index: 40
 }
 
 .WebCalender .calender-wrap .days-wrap .item .plan.-long.-red {
@@ -739,7 +762,7 @@ export default {
   font-family: "Roboto Condensed", sans-serif;
   font-size: 14px;
   padding: 8px 6px;
-  z-index: 30
+  z-index: 60
 }
 
 .WebCalender .calender-wrap .days-wrap .item.-mult .mult-num:before {
@@ -776,7 +799,8 @@ export default {
   -webkit-box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16);
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16);
   -webkit-transition: .3s;
-  transition: .3s
+  transition: .3s;
+  z-index: 10
 }
 
 .WebCalender .calender-wrap .days-wrap .-today .day {
@@ -786,20 +810,22 @@ export default {
 }
 
 .modal-wrap {
-  position: absolute
+  position: absolute;
+  width: 146px;
+  height: 126px;
 }
 
 .modal-wrap .content-wrap {
   background-color: #fff;
   border-radius: 5px;
-  width: 136px;
-  height: 116px;
+  width: 100%;
+  height: 100%;
   padding: 6px 2px;
   -webkit-transition: .3s;
   transition: .3s;
   position: absolute;
-  min-width: 245px;
-  min-height: 300px;
+  /* min-width: 245px;s
+  min-height: 300px; */
   -webkit-box-shadow: 0 3px 6px #00000029;
   box-shadow: 0 3px 6px #00000029;
   padding: 14px 10px 10px;
@@ -837,7 +863,7 @@ export default {
   color: #fff;
   padding: 3px 10px;
   width: 100%;
-  z-index: 10;
+  z-index: 40;
   display: block;
   position: static;
   padding: 5px 10px
