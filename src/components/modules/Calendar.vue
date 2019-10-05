@@ -6,8 +6,7 @@
         <span class="day">{{modalDay.day}}</span>
         <span v-for="plan in modalDay.longPlans"
         :key="plan.index"
-        class="plan -long -blue"
-        :class="modalStyleClass()">
+        class="plan -long -blue">
           {{ plan.title }}
         </span>
         <span v-for="plan in modalDay.plans" class="plan -short" :key="plan.index" :class="colorClass(plan.index)">
@@ -39,7 +38,7 @@
             <span>火</span>
           </div>
           <div class="item">
-            <span @click="hoge2">水{{hoge()}}</span>
+            <span>水</span>
           </div>
           <div class="item">
             <span>木</span>
@@ -104,8 +103,7 @@ export default {
         day: '',
         title: '',
         plans: [],
-        longPlans: [],
-        topStyle: 1
+        longPlans: []
       },
       duplicateCount: {}, // どの日付に何個のプランが重複しているか
       planIndex: {},
@@ -118,14 +116,6 @@ export default {
     }
   },
   methods: {
-    hoge () {
-      console.log('hoge')
-    },
-    hoge2 () {
-      console.log('hoge2')
-      this.$set(this.modalDay, 'day', '20191015')
-      this.$set(this.modalStyle, 'z-index', 200)
-    },
     /**
      * 来月のカレンダーを表示する
      */
@@ -202,6 +192,9 @@ export default {
       // 期間重複数
       let duplicateCount = this.duplicateCount[date]
       let margin = 1
+      // if (date === '20191020') {
+      //   console.log(this.planIndex[date])
+      // }
       for (let i = 1; i <= duplicateCount + 1; i++) {
         // planIndexに存在するIndexは使わない
         if (this.planIndex[date].find(item => item === i)) {
@@ -222,13 +215,6 @@ export default {
       }
       return `${style} -top${margin}`
     },
-    /**
-     * modalのプランに付与するclassをまとめるメソッド
-     */
-    modalStyleClass () {
-      this.$set(this.modalDay, 'topStyle', this.modalDay.topStyle + 1)
-      return `-top${this.modalDay.topStyle - 1}`
-    },
     /*
      * 長期期間の時に他の日のplanIndexを埋めていく
      * date 夏期講習の要素が入る日
@@ -244,6 +230,7 @@ export default {
      * computedに書けばいいのかメソッドに書けばいいのか迷い中
      */
     planCount () {
+      this.planIndex = {}
       let planCount = {}
       Object.keys(this.longPlansAll).forEach(date => {
         planCount[date] = 0
@@ -262,30 +249,21 @@ export default {
       }
       // クリックした親要素のobject
       let obj = this.$refs[`id_${date}`][0].getBoundingClientRect()
-      let x = obj.x + document.documentElement.scrollLeft - (this.$refs.container.getBoundingClientRect().x + 1)
+      let x = obj.x - (this.$refs.container.getBoundingClientRect().x + 1)
       let y = obj.y + document.documentElement.scrollTop
-      // this.$set(this.modalStyle, 'top', `${y}px`)
-      // this.$set(this.modalStyle, 'left', `${x}px`)
-      // this.$set(this.modalStyle, 'display', 'block')
-      // this.$set(this.modalStyle, 'z-index', 200)
-      console.log(this.modalStyle)
-      this.modalStyle.top = `${y}px`
-      this.modalStyle.left = `${x}px`
-      this.modalStyle.display = 'block'
-      this.modalStyle['z-index'] = 200
-      // this.$set(this.modalDay, 'day', date)
-      // this.$set(this.modalDay, 'plans', this.dayPlans[date])
-      // this.$set(this.modalDay, 'longPlans', this.longPlansAll[date])
-      this.modalDay.day = date
-      this.modalDay.plans = this.dayPlans[date]
-      this.modalDay.longPlans = this.longPlansAll[date]
-      console.log('detailPlan')
+      this.$set(this.modalStyle, 'top', `${y}px`)
+      this.$set(this.modalStyle, 'left', `${x}px`)
+      this.$set(this.modalStyle, 'display', 'block')
+      this.$set(this.modalStyle, 'z-index', 200)
+
+      this.$set(this.modalDay, 'day', date)
+      this.$set(this.modalDay, 'plans', this.dayPlans[date])
+      this.$set(this.modalDay, 'longPlans', this.longPlansAll[date])
     },
     close () {
       this.$set(this.modalStyle, 'display', 'none')
     },
     isMulti (date) {
-      console.log('isMulti')
       return this.duplicateCount[date] > 0
     }
   },
@@ -297,6 +275,9 @@ export default {
     this.day_plans = [
       {id: 1, day: '20191022', start_time: '19:00', end_time: '21:00', name: '数学'}
     ]
+    this.planCount()
+  },
+  beforeUpdate () {
     this.planCount()
   },
   watch: {
