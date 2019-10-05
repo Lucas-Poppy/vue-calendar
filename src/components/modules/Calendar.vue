@@ -69,20 +69,9 @@
                   <span class="time">{{plan.start_time}}</span>{{plan.name}}
                 </span>
               </div>
+              <span v-if="duplicateCount[day] > 0" class="mult-num">{{duplicateCount[day]}}</span>
             </div>
           </div>
-          <!-- <div class="item -weekstart -mult -today">
-            <div class="content-wrap">
-              <span class="day">1</span>
-              <span class="plan -long -start -blue">
-                <span>夏期講習</span>
-              </span>
-              <span class="plan -short -red"><span class="time">19:00</span>新規ユーザー...</span>
-              <span class="plan -short -purple"><span class="time">20:00</span>小林ゼミナー...</span>
-              <span class="plan -short -yellow"><span class="time">21:00</span>生徒さん親さ...</span>
-              <span class="mult-num">3</span>
-            </div>
-          </div> -->
         </div>
       </div>
     </div>
@@ -256,7 +245,7 @@ export default {
     },
     async detailPlan (event, date) {
       if (this.duplicateCount[date] === 0) {
-        return ''
+        return
       }
       await this.close(null, true)
       // クリックした親要素のobject
@@ -824,8 +813,6 @@ export default {
   -webkit-transition: .3s;
   transition: .3s;
   position: absolute;
-  /* min-width: 245px;s
-  min-height: 300px; */
   -webkit-box-shadow: 0 3px 6px #00000029;
   box-shadow: 0 3px 6px #00000029;
   padding: 14px 10px 10px;
