@@ -6,7 +6,8 @@
           <span class="day">{{dayFormat2(modalDay.day)}}</span>
           <span v-for="plan in modalDay.longPlans"
           :key="plan.index"
-          class="plan -long -blue">
+          class="plan -long"
+          :class="colorClass(plan.id)">
             {{ plan.title }}
           </span>
           <span v-for="plan in modalDay.plans" class="plan -short" :key="plan.index" :class="colorClass(plan.index)">
@@ -58,7 +59,7 @@
               <div class="plan-wrap">
                 <span v-for="plan in longPlans[day]"
                 :key="plan.index"
-                class="plan -long -blue"
+                class="plan -long"
                 :class="longPlanStyleClass(plan, day)">
                 {{ plan.title }}
                 </span>
@@ -192,6 +193,7 @@ export default {
      */
     longPlanStyleClass (longPlan, date) {
       let style = this.longPlanStatus(longPlan, date)
+      let colorClass = this.colorClass(longPlan.id)
       // 期間重複数
       let duplicateCount = this.duplicateCount[date]
       let margin = 1
@@ -213,7 +215,7 @@ export default {
         this.fillPlanIndex(date, j, i)
         break
       }
-      return `${style} -top${margin}`
+      return `${style} -top${margin} ${colorClass}`
     },
     /*
      * 長期期間の時に他の日のplanIndexを埋めていく
@@ -289,7 +291,7 @@ export default {
   },
   created () {
     this.long_plans = [
-      {id: 1, start_date: '20191012', end_date: '20191024', title: '長期講習1aaaaaaaaaaaaaaaaaaaaaaaaaaaa'},
+      {id: 1, start_date: '20191012', end_date: '20191024', title: '長期講習1aaaaaaaaaaaaaaaaa'},
       {id: 2, start_date: '20191019', end_date: '20191027', title: 'hogehoge'}
     ]
     this.day_plans = [
@@ -299,11 +301,6 @@ export default {
   },
   beforeUpdate () {
     this.planCount()
-  },
-  watch: {
-    current (val) {
-      this.planCount()
-    }
   },
   computed: {
     currentMoment () {
@@ -778,7 +775,7 @@ export default {
   height: 0
 }
 
-.WebCalender .calender-wrap .days-wrap .item.-mult:hover .content-wrap {
+.WebCalender .calender-wrap .days-wrap .item.-multi:hover .content-wrap {
   position: absolute;
   cursor: pointer;
   top: 0;
@@ -964,7 +961,7 @@ export default {
   padding: 10px
 }
 
-.modal-wrap.-mult:hover .content-wrap {
+.modal-wrap.-multi:hover .content-wrap {
   cursor: default;
   height: 300px
 }
