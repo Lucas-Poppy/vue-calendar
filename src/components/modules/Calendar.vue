@@ -10,7 +10,7 @@
             {{ plan.title }}
           </span>
           <span v-for="plan in modalDay.plans" class="plan -short" :key="plan.index" :class="colorClass(plan.index)">
-            <span class="time">{{plan.start_time}}</span>{{plan.name}}
+            <span class="time">{{`${plan.start_time}-${plan.end_time}`}}</span>{{plan.name}}
           </span>
           <span class="back-btn" @click="close"></span>
         </div>
@@ -52,7 +52,7 @@
           </div>
         </div>
         <div class="days-wrap">
-          <div v-for="day in calendarData" :key="day.index" class="item" :class="{'-mult': isMulti(day)}" :ref="`id_${day}`" @click="detailPlan($event, day); close(day)">
+          <div v-for="day in calendarData" :key="day.index" class="item" :class="{'-multi': isMulti(day)}" :ref="`id_${day}`" @click="detailPlan($event, day); close(day)">
             <div class="content-wrap">
               <span class="day" :class="{'-hide':isHide(day)}">{{dayFormat(day)}}</span>
               <div class="plan-wrap">
@@ -69,7 +69,7 @@
                   <span class="time">{{plan.start_time}}</span>{{plan.name}}
                 </span>
               </div>
-              <span v-if="duplicateCount[day] > 0" class="mult-num">{{duplicateCount[day]}}</span>
+              <span v-if="duplicateCount[day] > 0" class="multi-num">{{duplicateCount[day]}}</span>
             </div>
           </div>
         </div>
@@ -289,11 +289,11 @@ export default {
   },
   created () {
     this.long_plans = [
-      {id: 1, start_date: '20191012', end_date: '20191024', title: '長期講習1'},
+      {id: 1, start_date: '20191012', end_date: '20191024', title: '長期講習1aaaaaaaaaaaaaaaaaaaaaaaaaaaa'},
       {id: 2, start_date: '20191019', end_date: '20191027', title: 'hogehoge'}
     ]
     this.day_plans = [
-      {id: 1, day: '20191022', start_time: '19:00', end_time: '21:00', name: '数学'}
+      {id: 1, day: '20191022', start_time: '19:00', end_time: '21:00', name: '数学aaaaaaaaaaaaaaaaaaaaaaaaaa'}
     ]
     this.planCount()
   },
@@ -727,11 +727,11 @@ export default {
   margin-right: 6px
 }
 
-.WebCalender .calender-wrap .days-wrap .item.-mult {
+.WebCalender .calender-wrap .days-wrap .item.-multi {
   position: relative
 }
 
-.WebCalender .calender-wrap .days-wrap .item.-mult:after {
+.WebCalender .calender-wrap .days-wrap .item.-multi:after {
   content: '';
   position: absolute;
   bottom: 0;
@@ -742,7 +742,7 @@ export default {
   z-index: 20
 }
 
-.WebCalender .calender-wrap .days-wrap .item.-mult .mult-num {
+.WebCalender .calender-wrap .days-wrap .item.-multi .multi-num {
   position: absolute;
   right: 0;
   bottom: 0;
@@ -754,7 +754,7 @@ export default {
   z-index: 60
 }
 
-.WebCalender .calender-wrap .days-wrap .item.-mult .mult-num:before {
+.WebCalender .calender-wrap .days-wrap .item.-multi .multi-num:before {
   content: '\f0f0';
   color: #aaa;
   font-family: "Material Design Icons";
@@ -762,7 +762,7 @@ export default {
   transition: .3s
 }
 
-.WebCalender .calender-wrap .days-wrap .item.-mult .mult-num:after {
+.WebCalender .calender-wrap .days-wrap .item.-multi .multi-num:after {
   content: '';
   position: absolute;
   right: 0;
@@ -774,7 +774,7 @@ export default {
   border-color: transparent transparent #999999 transparent
 }
 
-.WebCalender .calender-wrap .days-wrap .item.-mult:hover:after {
+.WebCalender .calender-wrap .days-wrap .item.-multi:hover:after {
   height: 0
 }
 
