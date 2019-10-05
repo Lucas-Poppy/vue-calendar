@@ -3,7 +3,7 @@
     <!-- <div class="modal-wrap"> -->
     <div class="modal-wrap" :style="modalStyle">
       <div class="content-wrap">
-        <span class="day">{{modalDay.day}}</span>
+        <span class="day">{{dayFormat2(modalDay.day)}}</span>
         <span v-for="plan in modalDay.longPlans"
         :key="plan.index"
         class="plan -long -blue">
@@ -51,9 +51,9 @@
           </div>
         </div>
         <div class="days-wrap">
-          <div v-for="day in calendarData" :key="day.index" class="item" :class="{'-mult': isMulti(day)}" :ref="`id_${day}`" @click="detailPlan($event, day)">
+          <div v-for="day in calendarData" :key="day.index" class="item" :class="{'-mult': isMulti(day)}" :ref="`id_${day}`" @click="detailPlan($event, day); close(day)">
             <div class="content-wrap">
-              <span class="day">{{dayFormat(day)}}</span>
+              <span class="day" :class="{'-hide':isHide(day)}">{{dayFormat(day)}}</span>
               <div class="plan-wrap">
                 <span v-for="plan in longPlans[day]"
                 :key="plan.index"
@@ -120,12 +120,14 @@ export default {
      * 来月のカレンダーを表示する
      */
     goNextMonth () {
+      this.close()
       this.current++
     },
     /**
      * 先月のカレンダーを表示する
      */
     goPrevMonth () {
+      this.close()
       this.current--
     },
     /**
@@ -192,9 +194,6 @@ export default {
       // 期間重複数
       let duplicateCount = this.duplicateCount[date]
       let margin = 1
-      // if (date === '20191020') {
-      //   console.log(this.planIndex[date])
-      // }
       for (let i = 1; i <= duplicateCount + 1; i++) {
         // planIndexに存在するIndexは使わない
         if (this.planIndex[date].find(item => item === i)) {
@@ -260,11 +259,20 @@ export default {
       this.$set(this.modalDay, 'plans', this.dayPlans[date])
       this.$set(this.modalDay, 'longPlans', this.longPlansAll[date])
     },
-    close () {
+    close (date = null) {
+      if (date != null && date === this.modalDay.day) {
+        return
+      }
       this.$set(this.modalStyle, 'display', 'none')
     },
     isMulti (date) {
       return this.duplicateCount[date] > 0
+    },
+    dayFormat2 (date) {
+      return moment(date, 'YYYYMMDD').format('YYYY年MM月DD日')
+    },
+    isHide (date) {
+      return this.currentMoment.format('MM') !== moment(date, 'YYYYMMDD').format('MM')
     }
   },
   created () {
